@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Its postinstall only re-downloads a native binding that pnpm already installs as an optional dependency.
+ignoredBuiltDependencies:
+  - unrs-resolver

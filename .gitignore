@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+.env
+.env.local
+!.env.example
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/
+
+# Local Claude Code workspace (handoff notes, launch configs)
+.claude/
+
+.DS_Store
+Thumbs.db
