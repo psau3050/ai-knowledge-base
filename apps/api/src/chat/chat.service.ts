@@ -46,6 +46,7 @@ export class ChatService {
 
     let answer = '';
     let usage: TokenUsage | null = null;
+    let model = this.chat.model;
     const messages = buildAnswerMessages(history, question, chunks);
     for await (const part of this.chat.stream({ messages, signal })) {
       if (part.type === 'text') {
@@ -53,16 +54,17 @@ export class ChatService {
         yield { type: 'delta', text: part.text };
       } else {
         usage = part.usage;
+        model = part.model;
       }
     }
-    await this.usage.record(ctx, 'chat', this.chat, usage);
+    await this.usage.record(ctx, 'chat', { provider: this.chat.provider, model }, usage);
 
     const message = await this.conversations.addMessage(ctx, conversationId, {
       role: 'assistant',
       content: answer,
       citations: markCited(citations, answer),
       retrievalQuery: query,
-      model: this.chat.model,
+      model,
     });
     yield { type: 'done', message, usage };
   }
@@ -73,11 +75,11 @@ export class ChatService {
     question: string,
     signal: AbortSignal,
   ): Promise<string> {
-    const { text, usage } = await this.chat.complete({
+    const { text, usage, model } = await this.chat.complete({
       messages: buildCondenseMessages(history, question),
       signal,
     });
-    await this.usage.record(ctx, 'condense', this.chat, usage);
+    await this.usage.record(ctx, 'condense', { provider: this.chat.provider, model }, usage);
     const query = text.trim().replace(/^["'«]+|["'»]+$/g, '');
     // A rewrite that came back empty or rambling is worse than the raw question.
     return query && query.length <= MAX_QUERY_CHARS ? query : question;

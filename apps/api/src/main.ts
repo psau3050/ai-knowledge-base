@@ -14,8 +14,8 @@ async function bootstrap(): Promise<void> {
 
   const { chat, embeddings } = config.ai;
   new Logger('Bootstrap').log(
-    `API listening on http://localhost:${config.port} · chat: ${chat.provider}/${chat.model} · ` +
-      `embeddings: ${embeddings.provider}/${embeddings.model} (${embeddings.dimensions}d)`,
+    `API listening on http://localhost:${config.port} · chat: ${chat.provider} · ${chat.model} | ` +
+      `embeddings: ${embeddings.provider} · ${embeddings.model} (${embeddings.dimensions}d)`,
   );
 }
 

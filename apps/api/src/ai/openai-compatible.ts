@@ -52,6 +52,7 @@ export class OpenAICompatibleChatModel implements ChatModel {
       return {
         text: response.choices[0]?.message.content ?? '',
         usage: toTokenUsage(response.usage),
+        model: response.model || this.config.model,
       };
     } catch (error) {
       throw toProviderError(this.config.provider, error);
@@ -61,6 +62,7 @@ export class OpenAICompatibleChatModel implements ChatModel {
   async *stream({ messages, signal }: ChatRequest): AsyncIterable<ChatStreamPart> {
     let usage: TokenUsage | null = null;
     let finishReason: string | null = null;
+    let model = this.config.model;
     try {
       const stream = await this.client.chat.completions.create(
         {
@@ -73,6 +75,7 @@ export class OpenAICompatibleChatModel implements ChatModel {
         { signal },
       );
       for await (const chunk of stream) {
+        if (chunk.model) model = chunk.model;
         if (chunk.usage) usage = toTokenUsage(chunk.usage);
         const choice = chunk.choices[0];
         if (choice?.delta.content) yield { type: 'text', text: choice.delta.content };
@@ -81,7 +84,7 @@ export class OpenAICompatibleChatModel implements ChatModel {
     } catch (error) {
       throw toProviderError(this.config.provider, error);
     }
-    yield { type: 'finish', usage, finishReason };
+    yield { type: 'finish', usage, finishReason, model };
   }
 
   private samplingParams(): { temperature?: number } {
@@ -207,11 +210,11 @@ function toProviderError(provider: string, error: unknown): Error {
   if (error instanceof OpenAI.APIUserAbortError || error instanceof AiProviderError) return error;
   if (error instanceof OpenAI.APIError) {
     const status: unknown = error.status;
-    const code = typeof status === 'number' ? status : undefined;
+    // The SDK's message already starts with the HTTP status ("400 Model x does not exist").
     return new AiProviderError(
       provider,
-      `${provider} API error${code ? ` ${code}` : ''}: ${error.message}`,
-      code,
+      `${provider} API error: ${error.message}`,
+      typeof status === 'number' ? status : undefined,
       { cause: error },
     );
   }

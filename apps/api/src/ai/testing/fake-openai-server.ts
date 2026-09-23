@@ -21,6 +21,8 @@ export interface FakeOpenAIServerOptions {
   embed?: (text: string) => number[];
   /** Chat answer; streamed in two halves. */
   reply?: string;
+  /** Model reported in chat responses, like a router (openrouter/auto) that picks one per request. */
+  servedModel?: string;
 }
 
 /**
@@ -31,6 +33,7 @@ export async function startFakeOpenAIServer({
   dimensions,
   embed = (text) => Array.from({ length: dimensions }, () => text.length),
   reply = 'Hello',
+  servedModel,
 }: FakeOpenAIServerOptions): Promise<FakeOpenAIServer> {
   const requests: RecordedRequest[] = [];
   let failureStatus: number | null = null;
@@ -47,9 +50,8 @@ export async function startFakeOpenAIServer({
         return sendJson(res, failureStatus, { error: { message: 'Simulated failure' } });
       }
       if (req.url === '/v1/chat/completions') {
-        return body.stream
-          ? streamChat(res, String(body.model), reply)
-          : completeChat(res, String(body.model), reply);
+        const model = servedModel ?? String(body.model);
+        return body.stream ? streamChat(res, model, reply) : completeChat(res, model, reply);
       }
       if (req.url === '/v1/embeddings') {
         const inputs = Array.isArray(body.input) ? (body.input as string[]) : [String(body.input)];

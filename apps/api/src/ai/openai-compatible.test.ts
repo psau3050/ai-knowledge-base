@@ -47,6 +47,7 @@ describe('OpenAICompatibleChatModel', () => {
     expect(result).toEqual({
       text: 'Hello',
       usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+      model: 'any-chat-model',
     });
     const [request] = server.requests;
     expect(request?.path).toBe('/v1/chat/completions');
@@ -78,8 +79,32 @@ describe('OpenAICompatibleChatModel', () => {
         type: 'finish',
         finishReason: 'stop',
         usage: { promptTokens: 5, completionTokens: 2, totalTokens: 7 },
+        model: 'any-chat-model',
       },
     ]);
+  });
+
+  it('reports the model that actually answered when a router picks one', async () => {
+    const router = await startFakeOpenAIServer({
+      dimensions: DIMENSIONS,
+      servedModel: 'vendor/picked',
+    });
+    const model = new OpenAICompatibleChatModel({
+      provider: 'custom',
+      baseURL: router.baseURL,
+      apiKey: 'test-key',
+      model: 'router/auto',
+    });
+
+    const completion = await model.complete({ messages: [{ role: 'user', content: 'Hi' }] });
+    const parts: ChatStreamPart[] = [];
+    for await (const part of model.stream({ messages: [{ role: 'user', content: 'Hi' }] })) {
+      parts.push(part);
+    }
+    await router.close();
+
+    expect(completion.model).toBe('vendor/picked');
+    expect(parts.at(-1)).toMatchObject({ type: 'finish', model: 'vendor/picked' });
   });
 
   it('wraps HTTP failures in AiProviderError with the status code', async () => {

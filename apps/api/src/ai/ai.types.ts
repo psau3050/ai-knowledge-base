@@ -20,11 +20,13 @@ export interface ChatRequest {
 export interface ChatCompletion {
   text: string;
   usage: TokenUsage | null;
+  /** The model that actually answered; differs from the configured one behind routers. */
+  model: string;
 }
 
 export type ChatStreamPart =
   | { type: 'text'; text: string }
-  | { type: 'finish'; usage: TokenUsage | null; finishReason: string | null };
+  | { type: 'finish'; usage: TokenUsage | null; finishReason: string | null; model: string };
 
 export interface ChatModel {
   readonly provider: string;
