@@ -1,0 +1,2 @@
+-- Intentionally empty: sign up in the app (email confirmation is off locally), then import the sample
+-- documents from ./samples. Embeddings need a configured AI provider, so they can't be seeded in SQL.
