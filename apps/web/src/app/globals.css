@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+
+/* Minimal typography for rendered Markdown (answers and document previews). */
+.markdown {
+  @apply space-y-3 text-sm leading-relaxed break-words;
+}
+.markdown h1 {
+  @apply text-xl font-semibold;
+}
+.markdown h2 {
+  @apply text-lg font-semibold;
+}
+.markdown h3 {
+  @apply font-semibold;
+}
+.markdown ul {
+  @apply list-disc space-y-1 pl-5;
+}
+.markdown ol {
+  @apply list-decimal space-y-1 pl-5;
+}
+.markdown a {
+  @apply text-indigo-600 underline;
+}
+.markdown code {
+  @apply rounded bg-zinc-100 px-1 py-0.5 font-mono text-[0.85em];
+}
+.markdown pre {
+  @apply overflow-x-auto rounded-md bg-zinc-900 p-3 text-zinc-100;
+}
+.markdown pre code {
+  @apply bg-transparent p-0 text-zinc-100;
+}
+.markdown blockquote {
+  @apply border-l-2 border-zinc-300 pl-3 text-zinc-600;
+}
+.markdown table {
+  @apply w-full border-collapse text-left;
+}
+.markdown th,
+.markdown td {
+  @apply border border-zinc-200 px-2 py-1;
+}
