@@ -83,8 +83,16 @@ export function chunkDocument(
  * @returns the units to carry over, in document order
  */
 export function takeOverlap(units: Unit[], budget: number): Unit[] {
-  // TODO(human)
-  return [];
+  const overlap: Unit[] = [];
+  let tokens = 0;
+  // Walk back from the end and stop at the first unit that doesn't fit: the overlap stays one
+  // contiguous tail, and a unit is never cut, so the next chunk never starts mid-sentence.
+  for (const unit of units.toReversed()) {
+    if (tokens + unit.tokens > budget) break;
+    tokens += unit.tokens;
+    overlap.unshift(unit);
+  }
+  return overlap;
 }
 
 function packUnits(units: Unit[], options: ChunkerOptions): string[] {
