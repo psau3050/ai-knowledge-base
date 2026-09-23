@@ -9,6 +9,11 @@ Rules:
 - If the sources do not contain the answer, say you could not find it in the documents. Do not guess.
 - Answer in the language of the question. Be concise; use Markdown lists or code blocks when they help.`;
 
+// Repeated right after the question: small models weigh the last instruction most, and a system prompt
+// alone did not stop one of them from answering an English question in Korean.
+const ANSWER_REMINDER =
+  'Answer from the numbered sources only, cite them like [1], and reply in the same language as my question.';
+
 const CONDENSE_INSTRUCTIONS = `Rewrite the user's latest message as a standalone search query for their document collection.
 Resolve pronouns and references ("it", "that section", "the second one") using the conversation.
 Keep the user's language and key terms. Reply with the query only, without quotes or explanations.`;
@@ -39,7 +44,7 @@ export function buildAnswerMessages(
   return [
     { role: 'system', content: `${ANSWER_INSTRUCTIONS}\n\nSources:\n\n${sources}` },
     ...history,
-    { role: 'user', content: question },
+    { role: 'user', content: `${question}\n\n(${ANSWER_REMINDER})` },
   ];
 }
 
