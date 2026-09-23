@@ -16,6 +16,7 @@ const CODES: Record<number, string> = {
   404: 'not_found',
   409: 'conflict',
   413: 'payload_too_large',
+  415: 'unsupported_media_type',
   429: 'rate_limited',
 };
 
