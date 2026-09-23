@@ -1,0 +1,10 @@
+{
+  "extends": "@kb/typescript-config/library.json",
+  "compilerOptions": {
+    // Runs in both the browser and Node; DOM supplies the Web Streams / TextDecoder types both share.
+    "lib": ["ES2023", "DOM"],
+    "rootDir": "./src",
+    "outDir": "./dist"
+  },
+  "include": ["src"]
+}
