@@ -102,7 +102,7 @@ function EditorForm({ document }: { document?: DocumentDetail }) {
                 Delete
               </Button>
             )}
-            <Button type="submit" disabled={!dirty || saving} title="Ctrl/⌘ + S">
+            <Button type="submit" disabled={!dirty || saving} aria-keyshortcuts="Control+S Meta+S">
               {saving ? 'Saving & indexing…' : 'Save'}
             </Button>
           </>

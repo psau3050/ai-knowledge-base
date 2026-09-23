@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 
-# Its postinstall only re-downloads a native binding that pnpm already installs as an optional dependency.
-ignoredBuiltDependencies:
-  - unrs-resolver
+# unrs-resolver's postinstall only re-downloads a native binding that pnpm already installs as an
+# optional dependency, so it is explicitly not allowed to run (which also silences the install warning).
+allowBuilds:
+  unrs-resolver: false
