@@ -1,0 +1,40 @@
+{
+  "name": "@kb/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nest build",
+    "dev": "nest start --watch --preserveWatchOutput",
+    "start": "node dist/main.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "vitest run --config vitest.e2e.config.js"
+  },
+  "dependencies": {
+    "@kb/shared": "workspace:*",
+    "@nestjs/common": "^12.0.4",
+    "@nestjs/core": "^12.0.4",
+    "@nestjs/platform-express": "^12.0.4",
+    "@supabase/supabase-js": "^2.117.0",
+    "openai": "^7.22.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@kb/eslint-config": "workspace:*",
+    "@kb/typescript-config": "workspace:*",
+    "@nestjs/cli": "^12.0.5",
+    "@nestjs/schematics": "^12.0.0",
+    "@nestjs/testing": "^12.0.4",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node": "^24.13.6",
+    "eslint": "^9.39.5",
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.11"
+  }
+}
