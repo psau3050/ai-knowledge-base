@@ -6,7 +6,17 @@ import { aiEnvSchema, resolveAiConfig, type AiConfig } from '../ai/providers.js'
 
 const envSchema = z.object({
   API_PORT: z.coerce.number().int().positive().default(4000),
-  WEB_ORIGIN: z.url().default('http://localhost:3000'),
+  // Comma-separated: to a browser, localhost and 127.0.0.1 are different origins.
+  WEB_ORIGIN: z
+    .string()
+    .default('http://localhost:3000,http://127.0.0.1:3000')
+    .transform((value) =>
+      value
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter(Boolean),
+    )
+    .pipe(z.array(z.url()).min(1)),
   SUPABASE_URL: z.url(),
   // The publishable key (or the legacy anon key). The API never needs the secret / service-role key.
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
@@ -19,7 +29,7 @@ const envSchema = z.object({
 
 export interface AppConfig {
   port: number;
-  webOrigin: string;
+  webOrigins: string[];
   supabase: { url: string; publishableKey: string };
   rag: { topK: number; minSimilarity: number };
   ai: AiConfig;
@@ -51,7 +61,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const vars = parsed.data;
   return {
     port: vars.API_PORT,
-    webOrigin: vars.WEB_ORIGIN,
+    webOrigins: vars.WEB_ORIGIN,
     supabase: { url: vars.SUPABASE_URL, publishableKey: vars.SUPABASE_PUBLISHABLE_KEY },
     rag: { topK: vars.RAG_TOP_K, minSimilarity: vars.RAG_MIN_SIMILARITY },
     ai: resolveAiConfig(vars),
