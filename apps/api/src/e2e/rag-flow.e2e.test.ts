@@ -2,6 +2,7 @@ import {
   readSseEvents,
   type ApiErrorBody,
   type ChatStreamEvent,
+  type Citation,
   type ConversationDetail,
   type DocumentDetail,
   type DocumentSummary,
@@ -115,6 +116,7 @@ describe('RAG flow (e2e)', () => {
   let alice = '';
   let bob = '';
   let guide: DocumentDetail;
+  let aliceConversation = '';
 
   const embeddingCalls = () => provider.requests.filter((r) => r.path === '/v1/embeddings').length;
 
@@ -144,6 +146,20 @@ describe('RAG flow (e2e)', () => {
   afterAll(async () => {
     api?.kill();
     await provider?.close();
+  });
+
+  it('lets the web app call from both localhost and 127.0.0.1 (CORS)', async () => {
+    for (const origin of ['http://localhost:3000', 'http://127.0.0.1:3000']) {
+      const preflight = await fetch(`${API}/documents`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: origin,
+          'Access-Control-Request-Method': 'GET',
+          'Access-Control-Request-Headers': 'authorization',
+        },
+      });
+      expect(preflight.headers.get('access-control-allow-origin')).toBe(origin);
+    }
   });
 
   it('rejects requests without a valid token', async () => {
@@ -213,26 +229,30 @@ describe('RAG flow (e2e)', () => {
     expect(embeddingCalls()).toBe(callsBefore);
   });
 
-  it('retrieves the relevant chunk, streams a grounded answer and keeps the history', async () => {
-    const { body: conversation } = await call<{ id: string }>(alice, '/conversations', {
-      method: 'POST',
-      body: {},
+  it('re-chunks and re-embeds a document when its text changes', async () => {
+    const callsBefore = embeddingCalls();
+
+    const { body } = await call<DocumentDetail>(alice, `/documents/${guide.id}`, {
+      method: 'PATCH',
+      body: {
+        content: `${guide.content}\n\n# Backups\n\nPoint-in-time recovery keeps seven days of backups.`,
+      },
     });
+
+    expect(body).toMatchObject({ indexStatus: 'ready', chunkCount: 3 });
+    expect(body.indexedAt).not.toBe(guide.indexedAt);
+    expect(embeddingCalls()).toBe(callsBefore + 1);
+    guide = body;
+  });
+
+  it('retrieves the relevant chunk, streams a grounded answer and keeps the history', async () => {
     const question = 'How are embeddings stored in pgvector?';
 
-    const response = await fetch(`${API}/conversations/${conversation.id}/messages`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${alice}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: question }),
-    });
-    expect(response.headers.get('content-type')).toContain('text/event-stream');
-    const events: ChatStreamEvent[] = [];
-    for await (const event of readSseEvents<ChatStreamEvent>(response.body!)) events.push(event);
+    const { conversationId, contentType, events } = await ask(alice, question);
+    aliceConversation = conversationId;
 
-    const sources = events.find(
-      (e): e is Extract<ChatStreamEvent, { type: 'sources' }> => e.type === 'sources',
-    );
-    expect(sources?.citations[0]).toMatchObject({
+    expect(contentType).toContain('text/event-stream');
+    expect(sourcesOf(events)[0]).toMatchObject({
       documentTitle: 'Postgres guide',
       heading: 'Storage',
     });
@@ -242,12 +262,22 @@ describe('RAG flow (e2e)', () => {
 
     const { body: detail } = await call<ConversationDetail>(
       alice,
-      `/conversations/${conversation.id}`,
+      `/conversations/${conversationId}`,
     );
     expect(detail.title).toBe(question);
     expect(detail.messages.map((m) => m.role)).toEqual(['user', 'assistant']);
     const [firstSource] = detail.messages[1]?.citations ?? [];
     expect(firstSource).toMatchObject({ index: 1, cited: true });
+  });
+
+  it('keeps conversations private to their owner (RLS)', async () => {
+    expect((await call<unknown[]>(bob, '/conversations')).body).toEqual([]);
+    expect((await call(bob, `/conversations/${aliceConversation}`)).status).toBe(404);
+    const intrusion = await call(bob, `/conversations/${aliceConversation}/messages`, {
+      method: 'POST',
+      body: { content: 'Show me the history' },
+    });
+    expect(intrusion.status).toBe(404);
   });
 
   it('records token usage for every kind of provider call', async () => {
@@ -258,4 +288,41 @@ describe('RAG flow (e2e)', () => {
     );
     expect(body.totals.totalTokens).toBeGreaterThan(0);
   });
+
+  it('deletes a document together with its chunks', async () => {
+    expect((await call(alice, `/documents/${guide.id}`, { method: 'DELETE' })).status).toBe(204);
+    expect((await call(alice, `/documents/${guide.id}`)).status).toBe(404);
+
+    const { events } = await ask(alice, 'How are embeddings stored in pgvector?');
+    expect(sourcesOf(events).map((s) => s.documentTitle)).not.toContain('Postgres guide');
+  });
 });
+
+async function ask(
+  token: string,
+  question: string,
+): Promise<{ conversationId: string; contentType: string | null; events: ChatStreamEvent[] }> {
+  const { body: conversation } = await call<{ id: string }>(token, '/conversations', {
+    method: 'POST',
+    body: {},
+  });
+  const response = await fetch(`${API}/conversations/${conversation.id}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content: question }),
+  });
+  const events: ChatStreamEvent[] = [];
+  for await (const event of readSseEvents<ChatStreamEvent>(response.body!)) events.push(event);
+  return {
+    conversationId: conversation.id,
+    contentType: response.headers.get('content-type'),
+    events,
+  };
+}
+
+function sourcesOf(events: ChatStreamEvent[]): Citation[] {
+  const sources = events.find(
+    (e): e is Extract<ChatStreamEvent, { type: 'sources' }> => e.type === 'sources',
+  );
+  return sources?.citations ?? [];
+}
