@@ -3,8 +3,6 @@
 Write or upload documents, then ask questions about them. Answers are grounded in your own documents,
 stream in as they are generated, and cite the passages they came from.
 
-**Loom walkthroughs:** [the app](LOOM_APP_URL) · [how I used AI to build it](LOOM_AI_URL)
-
 Turborepo · Next.js 16 · NestJS 12 · Supabase (Postgres, pgvector, Auth, RLS) · any OpenAI-compatible AI provider
 
 ---
@@ -276,4 +274,16 @@ Errors are always `{ "error": { "code", "message", "details?" } }`.
 
 ## How AI was used
 
-Built with Claude Code as a pair programmer. The second Loom above walks through the workflow.
+Built with Claude Code as a pair programmer; it wrote most of the code. The workflow:
+
+- **Requirements as a checklist.** The brief became a list of requirements, and each one was checked
+  against the running system rather than against code that looks right.
+- **Tight feedback loop.** Every change went through lint, typecheck, unit tests and the e2e suite, which
+  runs the built API against a real local Supabase and a fake OpenAI-compatible server.
+- **Real models found what tests didn't.** Using the app with free OpenRouter models surfaced issues that
+  were then fixed and covered: a router model answering an English question in Korean (the answer rules
+  are now restated right after the question), a pinned free model returning 429s (chat moved to the
+  `openrouter/free` router, and the model that actually served each answer is recorded), and the web app
+  being refused when opened on `127.0.0.1` (CORS now accepts a list of origins).
+- **Clean-clone check.** The repo was cloned fresh and brought up with `pnpm bootstrap` to confirm the
+  setup steps in this README work as written.
